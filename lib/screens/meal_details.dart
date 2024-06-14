@@ -1,22 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:meals/models/meal.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meals/providers/favourites_provider.dart';
 
-class MealDetails extends StatelessWidget {
-  const MealDetails(
-      {super.key, required this.meal, required this.onToggleFavourite});
+class MealDetails extends ConsumerWidget {
+  const MealDetails({super.key, required this.meal});
   final Meal meal;
-  final void Function(Meal meal) onToggleFavourite;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isFavourite = ref.watch(favouriteMealsProvider).contains(meal);
     return Scaffold(
       appBar: AppBar(
         actions: [
           IconButton(
               onPressed: () {
-                onToggleFavourite(meal);
+                final wasAddedd = ref
+                    .read(favouriteMealsProvider.notifier)
+                    .toggleMealFavouriteStatues(meal);
+
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(wasAddedd ? 'Meal added' : 'Meal removed'),
+                  duration: const Duration(seconds: 1),
+                ));
               },
-              icon: const Icon(Icons.star))
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, animation) {
+                  return RotationTransition(
+                    turns: Tween<double>(begin: 0.8, end: 1).animate(animation),
+                    child: child,
+                  );
+                },
+                child: Icon(
+                  isFavourite ? Icons.star : Icons.star_border,
+                  key: ValueKey(isFavourite),
+                ),
+              ))
         ],
         title: Text(
           meal.title,
@@ -29,11 +50,14 @@ class MealDetails extends StatelessWidget {
       body: ListView(children: [
         Column(
           children: [
-            Image.network(
-              meal.imageUrl,
-              width: double.infinity,
-              height: 300,
-              fit: BoxFit.cover,
+            Hero(
+              tag: meal.id,
+              child: Image.network(
+                meal.imageUrl,
+                width: double.infinity,
+                height: 300,
+                fit: BoxFit.cover,
+              ),
             ),
             const SizedBox(
               height: 14,
